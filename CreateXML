@@ -1,0 +1,41 @@
+function Get-StartMenuShortcuts{
+	$Shortcuts = Get-ChildItem -Recurse 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs' -Include *.lnk
+    $Shell = New-Object -ComObject WScript.Shell
+    foreach ($Shortcut in $Shortcuts)
+    {
+        $Properties = @{
+        ShortcutName = $Shortcut.Name;
+        ShortcutFull = $Shortcut.FullName;
+        ShortcutPath = $shortcut.DirectoryName;
+        Target = $Shell.CreateShortcut($Shortcut).targetpath
+        }
+        New-Object PSObject -Property $Properties
+    }
+
+[Runtime.InteropServices.Marshal]::ReleaseComObject($Shell) | Out-Null
+}
+
+$Outputs = Get-StartMenuShortcuts
+#$Outputs.Target
+
+ForEach ($Output in $outputs) {
+    $folder = Split-Path -Path $Output.ShortcutFull -Parent
+    If ($folder -eq 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs'){
+        Write-Host 'This link is located in the Programs folder' -ForegroundColor Yellow
+        $rootfolder = ''
+    }
+    Else{
+        $rootfolder = $folder.Substring(53,$folder.Length-53)
+#        $rootfolder
+    }
+    $SCN = $($($Output).ShortcutName).Substring(0,$($($Output).ShortcutName).Length-4)
+    $Outputlocation = $env:USERPROFILE + '\Desktop\' + $($SCN) + '.xml'
+    If (!($($Output).Target -eq "")){$StartIn = Split-Path -Path $($Output).Target -Parent}
+
+    $text = '<?xml version="1.0" encoding="utf-8"?><userEnvironmentSettings><setting type="shortcut" lnk="' + $($SCN) + '" path="' + $($Output).Target + '" iconPath="' + $($Output).Target + '" iconIndex="0" programsMenu="' + $($rootfolder) + '" skipIfExists="1" undo="1" async="1" showCmd="3" tag="Start Menu" startIn="' + $($StartIn) + '" label="' + $($rootfolder) + '"/></userEnvironmentSettings>'
+    write-Host $text
+    
+    #$Outputlocation
+	$text |  Out-File -Encoding utf8 -LiteralPath "$($Outputlocation)"
+    
+}
